@@ -1,0 +1,297 @@
+from ultralytics import YOLO
+import time
+import streamlit as st
+import cv2
+from collections import defaultdict
+import os
+import settings
+
+frame_class_counts = {}
+
+
+def load_model(model_path):
+    """
+    Loads a YOLO object detection model from the specified model_path.
+
+    Parameters:
+        model_path (str): The path to the YOLO model file.
+
+    Returns:
+        A YOLO object detection model.
+    """
+    model = YOLO(model_path)
+    return model
+
+
+# def display_tracker_options():
+#     display_tracker = st.radio("Display Tracker", ('Yes', 'No'))
+#     is_display_tracker = True if display_tracker == 'Yes' else False
+#     if is_display_tracker:
+#         tracker_type = st.radio("Tracker", ("bytetrack.yaml", "botsort.yaml"))
+#         return is_display_tracker, tracker_type
+#     return is_display_tracker, None
+
+def process_videos(input_dir, output_dir):
+    # if not os.path.exists(output_dir):
+    #     os.makedirs(output_dir)
+
+    for filename in os.listdir(input_dir):
+        if filename.lower().endswith(('.mp4', '.avi', '.mov')):
+            file_path = os.path.join(input_dir, filename)
+            cap = cv2.VideoCapture(file_path)
+
+            if not cap.isOpened():
+                # print(f"Error opening video file {filename}")
+                continue
+
+            # Get original video properties
+            fps = cap.get(cv2.CAP_PROP_FPS)
+            fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Codec for saving video
+            width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+            # Create VideoWriter object for output video
+            output_path = os.path.join(output_dir, filename)
+            out = cv2.VideoWriter(output_path, fourcc, fps, (480, 480))
+
+            while True:
+                ret, frame = cap.read()
+                if not ret:
+                    break
+
+                h, w, _ = frame.shape
+                min_dim = min(h, w)
+                if h > w:
+                    # Crop the top
+                    start_y = 0
+                    cropped_frame = frame[start_y:min_dim, 0:w] 
+                else:
+                    # Center crop
+                    start_x = (w - min_dim) // 2
+                    cropped_frame = frame[0:h, start_x:start_x + min_dim]
+                frame_resized = cv2.resize(cropped_frame, (480, 480))
+
+                # Write the frame to the output video
+                out.write(frame_resized)
+
+            cap.release()
+            out.release()
+            # print(f"Processed and saved {filename}")
+            return out
+
+
+
+
+def _display_detected_frames(conf, model, st_frame, image,frame_re_ini):
+    """
+    Display the detected objects on a video frame using the YOLOv8 model.
+
+    Args:
+    - conf (float): Confidence threshold for object detection.
+    - model (YoloV8): A YOLOv8 object detection model.
+    - st_frame (Streamlit object): A Streamlit object to display the detected video.
+    - image (numpy array): A numpy array representing the video frame.
+    - is_display_tracking (bool): A flag indicating whether to display object tracking (default=None).
+
+    Returns:
+    None
+    """
+    
+    # Previous UI
+    # res = model.predict(image, conf=conf)
+
+    # # # Plot the detected objects on the video frame
+    # res_plotted = res[0].plot()
+
+    # # res_rgb = cv2.cvtColor(res_plotted, cv2.COLOR_BGR2RGB)
+
+    # st_frame.image(res_plotted,
+    #                caption='Detected Video',
+    #                channels="BGR",
+    #                use_column_width=True
+    #                )
+
+    if frame_re_ini == 0:
+        # frame_num = 0
+        frame_class_counts.clear()
+   
+    # Predict the objects in the image using the YOLOv8 model
+    res = model.predict(image, conf=conf)
+    names = model.names
+    for r in res:
+        # Initialize a dictionary for this frame
+        class_count = defaultdict(int)  # Using defaultdict for easier counting
+        for c in r.boxes.cls:
+            class_name = names[int(c)]  
+            class_count[class_name] += 1  
+    # frame_num+=1
+    frame_class_counts[frame_re_ini] = dict(class_count)
+    res_plotted = res[0].plot()
+    st_frame.image(res_plotted,caption='Detected Video',channels="BGR",use_column_width=True)
+    return frame_class_counts
+
+# def play_youtube_video(conf, model):
+#     """
+#     Plays a webcam stream. Detects Objects in real-time using the YOLOv8 object detection model.
+
+#     Parameters:
+#         conf: Confidence of YOLOv8 model.
+#         model: An instance of the `YOLOv8` class containing the YOLOv8 model.
+
+#     Returns:
+#         None
+
+#     Raises:
+#         None
+#     """
+#     source_youtube = st.sidebar.text_input("YouTube Video url")
+
+#     is_display_tracker, tracker = display_tracker_options()
+
+#     if st.sidebar.button('Detect Objects'):
+#         try:
+#             yt = YouTube(source_youtube)
+#             stream = yt.streams.filter(file_extension="mp4", res=720).first()
+#             vid_cap = cv2.VideoCapture(stream.url)
+
+#             st_frame = st.empty()
+#             while (vid_cap.isOpened()):
+#                 success, image = vid_cap.read()
+#                 if success:
+#                     _display_detected_frames(conf,
+#                                              model,
+#                                              st_frame,
+#                                              image,
+#                                              is_display_tracker,
+#                                              tracker,
+#                                              )
+#                 else:
+#                     vid_cap.release()
+#                     break
+#         except Exception as e:
+#             st.sidebar.error("Error loading video: " + str(e))
+
+
+def play_rtsp_stream(conf, model):
+    """
+    Plays an rtsp stream. Detects Objects in real-time using the YOLOv8 object detection model.
+
+    Parameters:
+        conf: Confidence of YOLOv8 model.
+        model: An instance of the `YOLOv8` class containing the YOLOv8 model.
+
+    Returns:
+        None
+
+    Raises:
+        None
+    """
+    source_rtsp = st.sidebar.text_input("rtsp stream url:")
+    st.sidebar.caption('Example URL: rtsp://admin:12345@192.168.1.210:554/Streaming/Channels/101')
+    # is_display_tracker, tracker = display_tracker_options()
+    if st.sidebar.button('Detect Objects'):
+        try:
+            vid_cap = cv2.VideoCapture(source_rtsp)
+            st_frame = st.empty()
+            while (vid_cap.isOpened()):
+                success, image = vid_cap.read()
+                if success:
+                    _display_detected_frames(conf,
+                                             model,
+                                             st_frame,
+                                             image
+                                            #  is_display_tracker,
+                                            #  tracker
+                                             )
+                else:
+                    vid_cap.release()
+                    # vid_cap = cv2.VideoCapture(source_rtsp)
+                    # time.sleep(0.1)
+                    # continue
+                    break
+        except Exception as e:
+            vid_cap.release()
+            st.sidebar.error("Error loading RTSP stream: " + str(e))
+
+
+def play_webcam(conf, model):
+    """
+    Plays a webcam stream. Detects Objects in real-time using the YOLOv8 object detection model.
+
+    Parameters:
+        conf: Confidence of YOLOv8 model.
+        model: An instance of the `YOLOv8` class containing the YOLOv8 model.
+
+    Returns:
+        None
+
+    Raises:
+        None
+    """
+    source_webcam = settings.WEBCAM_PATH
+    # is_display_tracker, tracker = display_tracker_options()
+    if st.sidebar.button('Detect Objects'):
+        try:
+            vid_cap = cv2.VideoCapture(source_webcam)
+            st_frame = st.empty()
+            while (vid_cap.isOpened()):
+                success, image = vid_cap.read()
+                if success:
+                    _display_detected_frames(conf,
+                                             model,
+                                             st_frame,
+                                             image
+                                            #  is_display_tracker,
+                                            #  tracker,
+                                             )
+                else:
+                    vid_cap.release()
+                    break
+        except Exception as e:
+            st.sidebar.error("Error loading video: " + str(e))
+
+
+def play_stored_video(conf, model):
+    """
+    Plays a stored video file. Tracks and detects objects in real-time using the YOLOv8 object detection model.
+
+    Parameters:
+        conf: Confidence of YOLOv8 model.
+        model: An instance of the `YOLOv8` class containing the YOLOv8 model.
+
+    Returns:
+        None
+
+    Raises:
+        None
+    """
+    source_vid = st.sidebar.selectbox(
+        "Choose a video...", settings.VIDEOS_DICT.keys())
+
+    # is_display_tracker, tracker = display_tracker_options()
+
+    with open(settings.VIDEOS_DICT.get(source_vid), 'rb') as video_file:
+        video_bytes = video_file.read()
+    if video_bytes:
+        st.video(video_bytes)
+
+    if st.sidebar.button('Detect Video Objects'):
+        try:
+            vid_cap = cv2.VideoCapture(
+                str(settings.VIDEOS_DICT.get(source_vid)))
+            st_frame = st.empty()
+            while (vid_cap.isOpened()):
+                success, image = vid_cap.read()
+                if success:
+                    _display_detected_frames(conf,
+                                             model,
+                                             st_frame,
+                                             image
+                                            #  is_display_tracker,
+                                            #  tracker
+                                             )
+                else:
+                    vid_cap.release()
+                    break
+        except Exception as e:
+            st.sidebar.error("Error loading video: " + str(e))
