@@ -5,7 +5,7 @@ import cv2
 from collections import defaultdict
 import os
 import settings
-
+from pytube import YouTube
 frame_class_counts = {}
 
 
@@ -130,46 +130,46 @@ def _display_detected_frames(conf, model, st_frame, image,frame_re_ini):
     st_frame.image(res_plotted,caption='Detected Video',channels="BGR",use_column_width=True)
     return frame_class_counts
 
-# def play_youtube_video(conf, model):
-#     """
-#     Plays a webcam stream. Detects Objects in real-time using the YOLOv8 object detection model.
+def play_youtube_video(conf, model):
+    """
+    Plays a webcam stream. Detects Objects in real-time using the YOLOv8 object detection model.
 
-#     Parameters:
-#         conf: Confidence of YOLOv8 model.
-#         model: An instance of the `YOLOv8` class containing the YOLOv8 model.
+    Parameters:
+        conf: Confidence of YOLOv8 model.
+        model: An instance of the `YOLOv8` class containing the YOLOv8 model.
 
-#     Returns:
-#         None
+    Returns:
+        None
 
-#     Raises:
-#         None
-#     """
-#     source_youtube = st.sidebar.text_input("YouTube Video url")
+    Raises:
+        None
+    """
+    source_youtube = st.sidebar.text_input("YouTube Video url")
 
-#     is_display_tracker, tracker = display_tracker_options()
+    is_display_tracker, tracker = display_tracker_options()
 
-#     if st.sidebar.button('Detect Objects'):
-#         try:
-#             yt = YouTube(source_youtube)
-#             stream = yt.streams.filter(file_extension="mp4", res=720).first()
-#             vid_cap = cv2.VideoCapture(stream.url)
+    if st.sidebar.button('Detect Objects'):
+        try:
+            yt = YouTube(source_youtube)
+            stream = yt.streams.filter(file_extension="mp4", res=720).first()
+            vid_cap = cv2.VideoCapture(stream.url)
 
-#             st_frame = st.empty()
-#             while (vid_cap.isOpened()):
-#                 success, image = vid_cap.read()
-#                 if success:
-#                     _display_detected_frames(conf,
-#                                              model,
-#                                              st_frame,
-#                                              image,
-#                                              is_display_tracker,
-#                                              tracker,
-#                                              )
-#                 else:
-#                     vid_cap.release()
-#                     break
-#         except Exception as e:
-#             st.sidebar.error("Error loading video: " + str(e))
+            st_frame = st.empty()
+            while (vid_cap.isOpened()):
+                success, image = vid_cap.read()
+                if success:
+                    _display_detected_frames(conf,
+                                             model,
+                                             st_frame,
+                                             image,
+                                             is_display_tracker,
+                                             tracker,
+                                             )
+                else:
+                    vid_cap.release()
+                    break
+        except Exception as e:
+            st.sidebar.error("Error loading video: " + str(e))
 
 
 def play_rtsp_stream(conf, model):
@@ -214,43 +214,58 @@ def play_rtsp_stream(conf, model):
             st.sidebar.error("Error loading RTSP stream: " + str(e))
 
 
+# def play_webcam(conf, model):
+#     """
+#     Plays a webcam stream. Detects Objects in real-time using the YOLOv8 object detection model.
+
+#     Parameters:
+#         conf: Confidence of YOLOv8 model.
+#         model: An instance of the `YOLOv8` class containing the YOLOv8 model.
+
+#     Returns:
+#         None
+
+#     Raises:
+#         None
+#     """
+#     source_webcam = settings.WEBCAM_PATH
+#     # is_display_tracker, tracker = display_tracker_options()
+#     if st.sidebar.button('Detect Objects'):
+#         try:
+#             vid_cap = cv2.VideoCapture(source_webcam)
+#             st_frame = st.empty()
+#             while (vid_cap.isOpened()):
+#                 success, image = vid_cap.read()
+#                 if success:
+#                     _display_detected_frames(conf,
+#                                              model,
+#                                              st_frame,
+#                                              image
+#                                             #  is_display_tracker,
+#                                             #  tracker,
+#                                              )
+#                 else:
+#                     vid_cap.release()
+#                     break
+#         except Exception as e:
+#             st.sidebar.error("Error loading video: " + str(e))
 def play_webcam(conf, model):
-    """
-    Plays a webcam stream. Detects Objects in real-time using the YOLOv8 object detection model.
-
-    Parameters:
-        conf: Confidence of YOLOv8 model.
-        model: An instance of the `YOLOv8` class containing the YOLOv8 model.
-
-    Returns:
-        None
-
-    Raises:
-        None
-    """
-    source_webcam = settings.WEBCAM_PATH
-    # is_display_tracker, tracker = display_tracker_options()
     if st.sidebar.button('Detect Objects'):
-        try:
-            vid_cap = cv2.VideoCapture(source_webcam)
-            st_frame = st.empty()
-            while (vid_cap.isOpened()):
-                success, image = vid_cap.read()
-                if success:
-                    _display_detected_frames(conf,
-                                             model,
-                                             st_frame,
-                                             image
-                                            #  is_display_tracker,
-                                            #  tracker,
-                                             )
-                else:
-                    vid_cap.release()
-                    break
-        except Exception as e:
-            st.sidebar.error("Error loading video: " + str(e))
+        # Use camera input to allow users to take a picture
+        image = st.camera_input("Take a picture")
 
+        if image is not None:
+            # Convert the uploaded image to a format suitable for OpenCV
+            img_array = cv2.imdecode(np.frombuffer(image.getvalue(), np.uint8), cv2.IMREAD_COLOR)
 
+            # Perform detection
+            detections = model.detect(img_array, conf)  # Update according to your detection method
+            
+            # Draw detections on the image
+            img_with_detections = _display_detected_frames(img_array, detections)
+
+            # Display the resulting frame
+            st.image(img_with_detections, channels='BGR', use_column_width=True)
 def play_stored_video(conf, model):
     """
     Plays a stored video file. Tracks and detects objects in real-time using the YOLOv8 object detection model.
