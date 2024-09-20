@@ -51,7 +51,7 @@ st.set_page_config(
 st.title("L&T PES BOM Verification")
 
 with st.sidebar:
-    st.image("C:\\Users\\20372227\\Desktop\\Model Workspace\\ui\\assets\\logo_new.jpg", width=250)
+    st.image("/home/aicoe-lnx/Desktop/UAV-YOLO/yolov8-frontend/assets/logo.png", width=250)
 
 confidence = 0.25
 model_path = settings.DETECTION_MODEL

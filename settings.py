@@ -47,10 +47,10 @@ VIDEOS_DICT = {
 DEFAULT_VIDEO = VIDEO_DIR / 'video_1.mp4'
 DEFAULT_DETECT_VIDEO = VIDEO_DIR / 'video_1.mp4'
 # ML Model config
-MODEL_DIR = ROOT / 'weights'
-DETECTION_MODEL = MODEL_DIR / 'best.pt'
+# MODEL_DIR = ROOT / 'weights'
+DETECTION_MODEL = 'best.pt'
 
-SEGMENTATION_MODEL = MODEL_DIR / 'yolov8n-seg.pt'
+# SEGMENTATION_MODEL = MODEL_DIR / 'yolov8n-seg.pt'
 
 # Webcam
 WEBCAM_PATH = 0
