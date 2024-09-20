@@ -173,27 +173,50 @@ elif source_radio == settings.VIDEO:
                 if source_video is None:
                     default_video_path = str(settings.DEFAULT_VIDEO)
                     st.video(default_video_path, format="video/mp4")
-                    # st.write("Input Video")
-                    # Add a caption below the video with custom styling
+                    
+                    # Caption for the default video
                     caption = """
                     <div style="text-align: center; color: black; font-size: 25px;">
                         Input Video
                     </div>
                     """
-
                     st.markdown(caption, unsafe_allow_html=True)
                 else:
-                    st.video(source_video, format = "video/mp4") #Uploaded video
-
-            except Exception as ex:
-                st.error("Error occurred while opening the video.")
-                st.error(ex)
-
-            caption = """
+                    # temp_file = tempfile.NamedTemporaryFile(delete=False)
+                    # temp_file.write(source_video.read())
+                   
+                
+                    # vid_cap = cv2.VideoCapture(str(temp_file.name))
+                    # st_frame = st.empty()
+                    # frame_resized = cv2.resize(vid_cap, (480, 480))
+                    # st.vide(frame_resized)
                     
-                    """
-            # Giving some empty space between the Input Video and Detected video
-            st.markdown(caption, unsafe_allow_html=True)
+                    
+                    # frame_re_ini = 0
+                    # while True:
+                    #     success, frame = vid_cap.read()
+                    #     if success:
+                    #         # h, w, _ = frame.shape
+                    #         # min_dim = min(h, w)
+                    #         # if h > w:
+                    #         #     # Crop the top
+                    #         #     start_y = 0
+                    #         #     cropped_frame = frame[start_y:min_dim, 0:w] 
+                    #         # else:
+                    #         #     # Center crop
+                    #         #     start_x = (w - min_dim) // 2
+                    #         # cropped_frame = frame[0:h, start_x:start_x + min_dim]
+                    #         frame_resized = cv2.resize(frame, (480, 480))
+                    # frame_global_output = helper._display_frames(st_frame,frame_resized)
+                    #         # frame_re_ini+=1
+                    #     else:
+                    #         vid_cap.release()
+                    #         global_check = True
+                    #         break
+                    print("Nothing")
+            except Exception as e:
+                st.error(f"Error displaying video: {e}")
+
 
         # Table logic
         with col2:
@@ -278,7 +301,3 @@ elif source_radio == settings.VIDEO:
 
             
 
-# Assume some helper functions and settings are already defined in the script
-# like 'helper', 'settings', 'model', and 'confidence'
-
-# Video detection logic
